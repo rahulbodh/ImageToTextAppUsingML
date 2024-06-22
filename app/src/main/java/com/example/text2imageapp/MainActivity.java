@@ -28,6 +28,13 @@ public class MainActivity extends AppCompatActivity {
 
 
         capture = findViewById(R.id.idBtnCapture);
+        capture.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent i = new Intent(MainActivity.this, Scanner_activity.class);
+                startActivity(i);
+            }
+        });
 
     }
 }
