@@ -3,13 +3,18 @@ package com.example.text2imageapp;
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -22,7 +27,8 @@ public class Scanner_activity extends AppCompatActivity {
     private ImageView camImage;
     private TextView resultText;
     private Button detectTextBtn;
-
+    private static final int REQUEST_IMAGE_CAPTURE = 100;
+    private static final int PERMISSION_CODE = 200;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,43 +45,69 @@ public class Scanner_activity extends AppCompatActivity {
         resultText = findViewById(R.id.idTVDetectedText);
         detectTextBtn = findViewById(R.id.idButtonDetect);
         capture = findViewById(R.id.idButtonSnap);
-        
+
         detectTextBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 DetectText();
             }
         });
-        
+
         capture.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 if (CheckCameraPermission()){
                     CaptureImage();
-                }else {
+                } else {
                     RequestCameraPermission();
                 }
             }
         });
-        
     }
 
     private void CaptureImage() {
+        Intent takePicture = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        if (takePicture.resolveActivity(getPackageManager()) != null) {
+            startActivityForResult(takePicture, REQUEST_IMAGE_CAPTURE);
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        if (requestCode == PERMISSION_CODE && grantResults.length > 0) {
+            boolean cameraPermission = grantResults[0] == PackageManager.PERMISSION_GRANTED;
+            if (cameraPermission) {
+                Toast.makeText(this, "Permission Granted", Toast.LENGTH_SHORT).show();
+                CaptureImage();
+            } else {
+                Toast.makeText(this, "Permission Denied", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
+            Bundle extras = data.getExtras();
+            Bitmap imageBitmap = (Bitmap) extras.get("data");
+            camImage.setImageBitmap(imageBitmap);
+        }
     }
 
     private void RequestCameraPermission() {
-        int PERMISSION_CODE = 200;
-        ActivityCompat.requestPermissions(this,new String[]{
-                Manifest.permission.CAMERA
-        },PERMISSION_CODE);
-        
+        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, PERMISSION_CODE);
     }
 
     private boolean CheckCameraPermission() {
-        int cameraPermission = ContextCompat.checkSelfPermission(getApplicationContext(),CAMERA_SERVICE);
+        int cameraPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA);
         return cameraPermission == PackageManager.PERMISSION_GRANTED;
     }
 
     private void DetectText() {
+        // Implementation for text detection
     }
 }
