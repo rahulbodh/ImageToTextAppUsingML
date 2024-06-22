@@ -4,6 +4,8 @@ import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.graphics.Point;
+import android.graphics.Rect;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.view.View;
@@ -22,11 +24,21 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Task;
+import com.google.mlkit.vision.common.InputImage;
+import com.google.mlkit.vision.text.Text;
+import com.google.mlkit.vision.text.TextRecognition;
+import com.google.mlkit.vision.text.TextRecognizer;
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
+
 public class Scanner_activity extends AppCompatActivity {
     private Button capture;
     private ImageView camImage;
     private TextView resultText;
     private Button detectTextBtn;
+    private Bitmap imageBitmap;
     private static final int REQUEST_IMAGE_CAPTURE = 100;
     private static final int PERMISSION_CODE = 200;
 
@@ -56,7 +68,7 @@ public class Scanner_activity extends AppCompatActivity {
         capture.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (CheckCameraPermission()){
+                if (CheckCameraPermission()) {
                     CaptureImage();
                 } else {
                     RequestCameraPermission();
@@ -93,7 +105,7 @@ public class Scanner_activity extends AppCompatActivity {
 
         if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
             Bundle extras = data.getExtras();
-            Bitmap imageBitmap = (Bitmap) extras.get("data");
+            imageBitmap = (Bitmap) extras.get("data");
             camImage.setImageBitmap(imageBitmap);
         }
     }
@@ -109,5 +121,40 @@ public class Scanner_activity extends AppCompatActivity {
 
     private void DetectText() {
         // Implementation for text detection
+        TextRecognizer recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
+        InputImage image = InputImage.fromBitmap(imageBitmap, 0);
+
+        Task<Text> result =
+                recognizer.process(image)
+                        .addOnSuccessListener(new OnSuccessListener<Text>() {
+                            @Override
+                            public void onSuccess(Text visionText) {
+                                StringBuilder result = new StringBuilder();
+
+                                for (Text.TextBlock block : visionText.getTextBlocks()) {
+                                    String blockText = block.getText();
+                                    Point[] blockCornerPoints = block.getCornerPoints();
+                                    Rect blockFrame = block.getBoundingBox();
+                                    for (Text.Line line : block.getLines()) {
+                                        String lineText = line.getText();
+                                        Point[] lineCornerPoints = line.getCornerPoints();
+                                        Rect lineFrame = line.getBoundingBox();
+                                        for (Text.Element element : line.getElements()) {
+                                            String elementText = element.getText();
+                                            result.append(elementText);
+                                        }
+                                        resultText.setText(blockText);
+                                    }
+                                }
+                            }
+                        }).addOnFailureListener(
+                                new OnFailureListener() {
+                                    @Override
+                                    public void onFailure(@NonNull Exception e) {
+                                       Toast.makeText(Scanner_activity.this, e.getMessage(), Toast.LENGTH_SHORT).show();
+                                    }
+                                });
+
+
     }
 }
